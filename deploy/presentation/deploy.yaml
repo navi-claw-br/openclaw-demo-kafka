@@ -1,0 +1,77 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: presentation-html
+  namespace: openclaw-agents
+data:
+  index.html: |
+    {{PRESENTATION_HTML}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openclaw-presentation
+  namespace: openclaw-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openclaw-presentation
+  template:
+    metadata:
+      labels:
+        app: openclaw-presentation
+    spec:
+      containers:
+      - name: nginx
+        image: image-registry.openshift-image-registry.svc:5000/openshift/httpd:latest
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: html-volume
+          mountPath: /var/www/html/index.html
+          subPath: index.html
+        - name: image-volume
+          mountPath: /var/www/html/arch-diagram.jpg
+          subPath: arch-diagram.jpg
+        - name: logo-volume
+          mountPath: /var/www/html/redhat-logo.png
+          subPath: redhat-logo.png
+      volumes:
+      - name: html-volume
+        configMap:
+          name: presentation-html
+      - name: image-volume
+        configMap:
+          name: presentation-html
+      - name: logo-volume
+        configMap:
+          name: presentation-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openclaw-presentation
+  namespace: openclaw-agents
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: openclaw-presentation
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: openclaw-presentation
+  namespace: openclaw-agents
+spec:
+  to:
+    kind: Service
+    name: openclaw-presentation
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

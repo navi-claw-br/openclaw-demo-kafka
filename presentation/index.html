@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Red Hat — Arquitetura Agêntica para Kubernetes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --rh-red: #EE0000;
+    --rh-red-dark: #A30000;
+    --rh-red-light: #FF3333;
+    --rh-black: #000000;
+    --rh-dark: #151515;
+    --rh-gray: #6A6E73;
+    --rh-gray-light: #F5F5F5;
+    --rh-white: #FFFFFF;
+    --rh-blue: #0066CC;
+    --rh-blue-light: #06c;
+    --accent: #88C0D0;
+    --card-bg: #1E1E1E;
+    --card-border: #333333;
+    --gradient: linear-gradient(135deg, #EE0000, #A30000);
+    --gradient-alt: linear-gradient(135deg, #EE0000, #FF3333);
+    --glow: 0 0 40px rgba(238, 0, 0, .15);
+  }
+
+  body {
+    font-family: 'Red Hat Display', sans-serif;
+    background: var(--rh-dark);
+    color: var(--rh-white);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .slides {
+    display: flex;
+    transition: transform .6s cubic-bezier(.22,1,.36,1);
+    height: 100vh;
+    will-change: transform;
+  }
+  .slide {
+    min-width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem 5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: .04;
+    background: radial-gradient(ellipse at 20% 50%, var(--rh-red) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .slide::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(238,0,0,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(238,0,0,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .rh-watermark {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    font-size: .7rem;
+    color: rgba(255,255,255,.15);
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .slide-number {
+    position: absolute;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    font-size: .75rem;
+    color: var(--rh-gray);
+    font-weight: 600;
+    letter-spacing: .05em;
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: .8rem;
+    color: var(--rh-white);
+  }
+  h1.red {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  h2 {
+    font-size: clamp(1.8rem, 3.5vw, 3rem);
+    font-weight: 800;
+    margin-bottom: 1.2rem;
+    color: var(--rh-white);
+    text-align: center;
+  }
+  h2.red {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--rh-red-light);
+    margin-bottom: .8rem;
+  }
+  p, li {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: #c0c0c0;
+    max-width: 800px;
+    text-align: center;
+  }
+  .slide:not(.title-slide):not(.cover) p,
+  .slide:not(.title-slide):not(.cover) li {
+    text-align: left;
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    color: #a0a0a0;
+    font-weight: 400;
+    margin-top: .5rem;
+  }
+
+  .rh-badge {
+    display: inline-block;
+    background: var(--rh-red);
+    color: white;
+    font-size: .7rem;
+    font-weight: 700;
+    padding: .3rem .8rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-bottom: 1rem;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    width: 100%;
+    max-width: 1000px;
+    margin-top: 1.2rem;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1.3rem;
+    transition: all .3s;
+    cursor: default;
+    text-align: center;
+  }
+  .card:hover {
+    border-color: var(--rh-red);
+    transform: translateY(-4px);
+    box-shadow: var(--glow);
+  }
+  .card .icon { font-size: 2rem; margin-bottom: .5rem; }
+  .card h4 { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; color: var(--rh-white); }
+  .card p { font-size: .85rem; color: #a0a0a0; text-align: center; }
+
+  .timeline {
+    position: relative;
+    max-width: 700px;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding-left: 2rem;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--gradient);
+  }
+  .timeline-item {
+    position: relative;
+    padding: 0 0 1.2rem 1.5rem;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -1.65rem;
+    top: .35rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--gradient);
+    border: 2px solid var(--rh-dark);
+    box-shadow: 0 0 0 2px var(--rh-red);
+  }
+  .timeline-item .date {
+    font-size: .85rem;
+    color: var(--rh-red-light);
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: .2rem;
+  }
+  .timeline-item .desc {
+    font-size: .95rem;
+    color: #a0a0a0;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  .arch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .4rem;
+    width: 100%;
+    max-width: 900px;
+    margin-top: 1rem;
+  }
+  .arch-row {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .arch-box {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: .7rem 1.2rem;
+    text-align: center;
+    font-size: .8rem;
+    font-weight: 600;
+    min-width: 110px;
+    transition: all .3s;
+    color: var(--rh-white);
+  }
+  .arch-box:hover { border-color: var(--rh-red); }
+  .arch-box .sub { font-size: .65rem; color: #888; font-weight: 400; margin-top: .2rem; }
+  .arch-box.rh { border-color: var(--rh-red); background: rgba(238,0,0,.15); }
+  .arch-box.blue { border-color: var(--rh-blue); background: rgba(0,102,204,.1); }
+  .arch-box.accent { border-color: #88C0D0; background: rgba(136,192,208,.1); }
+  .arch-box.big { padding: .9rem 1.8rem; min-width: 160px; }
+  .arch-arrow { color: #666; font-size: 1rem; }
+
+  .stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .stat {
+    text-align: center;
+    padding: 1.2rem 1.5rem;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    min-width: 130px;
+  }
+  .stat-num {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-size: .8rem;
+    color: #888;
+    margin-top: .3rem;
+  }
+
+  .cover h1 { font-size: clamp(2.8rem, 5.5vw, 5rem); }
+  .cover .tagline {
+    font-size: 1rem;
+    color: var(--rh-red-light);
+    font-weight: 600;
+    margin-top: .8rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+  }
+  .cover .logo-rh {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--rh-red);
+    letter-spacing: .2em;
+    margin-bottom: .5rem;
+  }
+
+  .quote {
+    font-size: 1.2rem;
+    font-style: italic;
+    color: var(--rh-white);
+    max-width: 700px;
+    line-height: 1.6;
+    text-align: center;
+    padding: 1.5rem 2rem;
+    border-left: 3px solid var(--rh-red);
+    background: rgba(238,0,0,.05);
+    border-radius: 0 12px 12px 0;
+    margin-top: 1rem;
+  }
+  .quote-author {
+    font-size: .85rem;
+    color: #888;
+    margin-top: .4rem;
+    font-style: normal;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    width: 100%;
+    max-width: 1000px;
+    margin-top: 1.2rem;
+  }
+  .two-col .col { text-align: left; }
+  .two-col .col h4 { font-size: 1.05rem; margin-bottom: .8rem; color: var(--rh-white); }
+  .two-col .col ul { list-style: none; }
+  .two-col .col li {
+    font-size: .9rem;
+    padding: .4rem 0;
+    text-align: left;
+    color: #a0a0a0;
+  }
+  .two-col .col li::before { content: '▸ '; color: var(--rh-red-light); font-weight: 700; }
+
+  .nav-bar {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    background: rgba(21,21,21,.85);
+    backdrop-filter: blur(12px);
+    padding: .5rem 1rem;
+    border-radius: 40px;
+    border: 1px solid var(--card-border);
+    z-index: 100;
+  }
+  .nav-bar button {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: .3rem .5rem;
+    border-radius: 8px;
+    transition: all .2s;
+  }
+  .nav-bar button:hover { color: var(--rh-white); background: rgba(255,255,255,.05); }
+  .nav-bar button:active { transform: scale(.95); }
+  .nav-bar .dots { display: flex; gap: .4rem; }
+  .nav-bar .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--card-border);
+    transition: all .3s;
+    cursor: pointer;
+  }
+  .nav-bar .dot.active { background: var(--rh-red); width: 20px; border-radius: 4px; }
+  .nav-bar .slide-info {
+    font-size: .75rem;
+    color: #888;
+    font-family: 'JetBrains Mono', monospace;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .sidebar-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(21,21,21,.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border);
+    color: var(--rh-white);
+    font-size: 1.3rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    z-index: 200;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sidebar-toggle:hover { background: var(--rh-red); border-color: var(--rh-red); }
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 250;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s;
+  }
+  .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: -350px;
+    width: 320px;
+    height: 100vh;
+    background: var(--rh-dark);
+    border-left: 1px solid var(--card-border);
+    z-index: 300;
+    transition: right .35s cubic-bezier(.22,1,.36,1);
+    padding: 2rem 1.5rem;
+    overflow-y: auto;
+  }
+  .sidebar.open { right: 0; }
+  .sidebar h3 {
+    font-size: 1.1rem;
+    color: var(--rh-red-light);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .sidebar .index-item {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    padding: .7rem .8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .2s;
+    color: #a0a0a0;
+    font-size: .9rem;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .sidebar .index-item:hover { background: rgba(238,0,0,.1); color: var(--rh-white); }
+  .sidebar .index-item .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .75rem;
+    color: var(--rh-red);
+    min-width: 28px;
+    font-weight: 700;
+  }
+  .sidebar .close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.3rem;
+    cursor: pointer;
+  }
+  .sidebar .close-btn:hover { color: var(--rh-white); }
+
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--gradient);
+    z-index: 150;
+    transition: width .4s ease;
+  }
+
+  .slide.active .fade-in {
+    animation: fadeIn .6s ease forwards;
+  }
+  .slide.active .slide-up {
+    animation: slideUp .5s ease forwards;
+  }
+  .slide.active .slide-up-d1 { animation: slideUp .5s ease .1s forwards; opacity: 0; }
+  .slide.active .slide-up-d2 { animation: slideUp .5s ease .2s forwards; opacity: 0; }
+  .slide.active .slide-up-d3 { animation: slideUp .5s ease .3s forwards; opacity: 0; }
+  .slide.active .slide-up-d4 { animation: slideUp .5s ease .4s forwards; opacity: 0; }
+  .slide.active .slide-up-d5 { animation: slideUp .5s ease .5s forwards; opacity: 0; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .8rem;
+    background: rgba(255,255,255,.05);
+    padding: .1em .4em;
+    border-radius: 4px;
+    color: var(--rh-red-light);
+  }
+
+  .flow-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+    width: 100%;
+    max-width: 750px;
+    margin-top: 1rem;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    padding: .6rem 1rem;
+    border-radius: 8px;
+    font-size: .75rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 90px;
+  }
+  .flow-box.rh-bg { background: var(--rh-red); color: white; }
+  .flow-box.dark-bg { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--rh-white); }
+  .flow-box.dark-bg.highlight { border-color: var(--rh-red); }
+  .flow-box.blue-bg { background: var(--rh-blue); color: white; }
+  .flow-arrow { color: #666; font-size: .9rem; }
+
+  .agent-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+    max-width: 950px;
+    margin-top: 1rem;
+  }
+  .agent-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-top: 3px solid var(--rh-red);
+    border-radius: 12px;
+    padding: 1.2rem;
+    text-align: center;
+    transition: all .3s;
+  }
+  .agent-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--glow);
+  }
+  .agent-card .icon { font-size: 2rem; margin-bottom: .5rem; }
+  .agent-card h4 { font-size: 1rem; font-weight: 700; color: var(--rh-white); margin-bottom: .3rem; }
+  .agent-card .role { font-size: .75rem; color: var(--rh-red-light); font-weight: 700; margin-bottom: .5rem; text-transform: uppercase; letter-spacing: .05em; }
+  .agent-card p { font-size: .8rem; color: #888; text-align: center; }
+  .agent-card ul { list-style: none; text-align: left; margin-top: .5rem; }
+  .agent-card ul li {
+    font-size: .75rem;
+    color: #888;
+    padding: .2rem 0;
+    text-align: left;
+  }
+  .agent-card ul li::before { content: '✓ '; color: var(--rh-red-light); }
+
+  @media (max-width: 768px) {
+    .agent-cards { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 768px) {
+    .slide { padding: 1.5rem; }
+    .two-col { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: 1fr; }
+    .stats { flex-direction: column; align-items: center; }
+    .nav-bar { gap: .5rem; padding: .4rem .8rem; }
+    .arch-row { flex-direction: column; }
+    .arch-arrow { transform: rotate(90deg); }
+    .sidebar { width: 280px; right: -300px; }
+  }
+
+  #particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .slide > *:not(#particles) { position: relative; z-index: 1; }
+
+  /* ── Animated Architecture Diagram ── */
+  #archCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .arch-diagram {
+    position: relative;
+    width: 100%;
+    max-width: 950px;
+    height: 380px;
+    margin-top: .5rem;
+    z-index: 2;
+  }
+  .arch-diagram .label {
+    position: absolute;
+    text-align: center;
+    font-weight: 700;
+    font-size: .85rem;
+    color: var(--rh-white);
+    z-index: 3;
+  }
+  .arch-diagram .label .sub {
+    font-weight: 400;
+    font-size: .65rem;
+    color: #888;
+    display: block;
+    margin-top: .2rem;
+  }
+  .arch-diagram .label .icon { font-size: 1.6rem; display: block; margin-bottom: .3rem; }
+
+  .arch-diagram .openshift-box {
+    left: 3%;
+    top: 10%;
+    width: 17%;
+    height: 80%;
+    background: rgba(238,0,0,.12);
+    border: 1px solid rgba(238,0,0,.4);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: .5rem;
+  }
+  .arch-diagram .openshift-box .inner {
+    background: rgba(238,0,0,.15);
+    border: 1px solid rgba(238,0,0,.2);
+    border-radius: 8px;
+    padding: .4rem .8rem;
+    margin: .2rem 0;
+    font-size: .65rem;
+    color: #ccc;
+    width: 85%;
+    text-align: center;
+  }
+  .arch-diagram .openshift-box .inner.highlight { border-color: var(--rh-red); }
+
+  .arch-diagram .kafka-box {
+    left: 28%;
+    top: 15%;
+    width: 18%;
+    height: 70%;
+    background: rgba(0,102,204,.12);
+    border: 2px solid rgba(0,102,204,.5);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: .85rem;
+    font-weight: 700;
+  }
+  .arch-diagram .kafka-box .icon { font-size: 1.8rem; }
+  .arch-diagram .kafka-box .topic {
+    font-size: .55rem;
+    color: #888;
+    font-weight: 400;
+    margin: .15rem 0;
+  }
+
+  .arch-diagram .agent-box {
+    width: 14%;
+    height: 28%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    font-size: .7rem;
+    font-weight: 600;
+  }
+  .arch-diagram .agent-box .icon { font-size: 1.2rem; margin-bottom: .2rem; }
+  .arch-diagram .agent-box .badge {
+    font-size: .5rem;
+    color: var(--rh-red-light);
+    font-weight: 400;
+    margin-top: .15rem;
+  }
+  .arch-diagram .agent-box.orch {
+    top: 4%;
+    left: 55%;
+    border-color: var(--rh-red);
+    background: rgba(238,0,0,.1);
+  }
+  .arch-diagram .agent-box.sec {
+    top: 36%;
+    left: 55%;
+  }
+  .arch-diagram .agent-box.opt {
+    top: 68%;
+    left: 55%;
+  }
+  .arch-diagram .agent-box.ops {
+    top: 36%;
+    left: 76%;
+  }
+
+  /* Command/action back arrow (CSS static + canvas animated) */
+  .arch-diagram .back-arrow {
+    position: absolute;
+    font-size: .7rem;
+    color: var(--rh-red-light);
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<canvas id="particles"></canvas>
+
+<button class="sidebar-toggle" id="sidebarToggle" title="Índice">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<nav class="sidebar" id="sidebar">
+  <button class="close-btn" id="sidebarClose">✕</button>
+  <h3>📑 Índice</h3>
+  <div id="indexList"></div>
+</nav>
+
+<div class="slides" id="slides">
+
+  <!-- ══════ SLIDE 0 — CAPA ══════ -->
+  <section class="slide cover active" data-index="0">
+    <div class="logo-rh slide-up" style="display:flex;align-items:center;justify-content:center;gap:.8rem;margin-bottom:.5rem;">
+      <img src="./redhat-logo.png" style="height:160px;border-radius:8px;background:rgba(255,255,255,.95);padding:12px 24px;box-shadow:0 0 30px rgba(238,0,0,.2);" alt="Red Hat">
+    </div>
+    <div class="tagline slide-up">Open Source · Agentic AI · Kubernetes</div>
+    <h1 class="red slide-up-d1">Arquitetura Agêntica</h1>
+    <p class="subtitle slide-up-d2">Orquestração Inteligente de Clusters Kubernetes<br>com Agentes, Kafka e MCP</p>
+    <p class="slide-up-d3" style="margin-top:2rem;font-size:.9rem;color:#888;">
+      Luciano Scorsin · Arquiteto de Soluções · Red Hat
+    </p>
+    <div class="slide-number">01</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 1 — O DESAFIO ══════ -->
+  <section class="slide" data-index="1">
+    <span class="rh-badge slide-up">O Desafio</span>
+    <h2 class="red slide-up">Gerenciar Clusters K8s Hoje</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Clusters Kubernetes modernos são complexos, dinâmicos e exigem atenção 24/7.
+      Times de plataforma lutam para equilibrar segurança, performance e custo.
+    </p>
+    <div class="cards slide-up-d2">
+      <div class="card">
+        <div class="icon">📊</div>
+        <h4>Volume de Dados</h4>
+        <p>Milhões de métricas, logs e eventos por minuto — humanos não conseguem processar tudo.</p>
+      </div>
+      <div class="card">
+        <div class="icon">⏱️</div>
+        <h4>Tempo de Resposta</h4>
+        <p>Incidentes escalam em segundos. Alertas tradicionais são reativos e lentos.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🧠</div>
+        <h4>Conhecimento Disperso</h4>
+        <p>Cada cluster tem seu comportamento único — o conhecimento está na cabeça de poucos.</p>
+      </div>
+      <div class="card">
+        <div class="icon">💰</div>
+        <h4>Custo Operacional</h4>
+        <p>Recursos sub-otimizados, instâncias ociosas, falta de governança de custos.</p>
+      </div>
+    </div>
+    <div class="slide-number">02</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 2 — A VISÃO ══════ -->
+  <section class="slide" data-index="2">
+    <span class="rh-badge slide-up">A Visão</span>
+    <h2 class="red slide-up">Arquitetura Agêntica Red Hat</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Uma abordagem open-source, modular e inteligente para operar clusters Kubernetes:
+      <strong>agentes especializados</strong> que observam, decidem e agem — orquestrados por
+      um barramento de eventos em tempo real.
+    </p>
+    <div class="stats slide-up-d2">
+      <div class="stat">
+        <div class="stat-num">🔍</div>
+        <div class="stat-label">Observação</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">🧠</div>
+        <div class="stat-label">Decisão</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">⚡</div>
+        <div class="stat-label">Ação</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">🔄</div>
+        <div class="stat-label">Aprendizado</div>
+      </div>
+    </div>
+    <div class="quote slide-up-d3">
+      "Agentes não substituem operadores — eles aumentam a capacidade humana de operar em escala."
+      <div class="quote-author">— Red Hat · Princípios de AgenticOps</div>
+    </div>
+    <div class="slide-number">03</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 3 — O QUE É ══════ -->
+  <section class="slide" data-index="3">
+    <span class="rh-badge slide-up">Conceito</span>
+    <h2 class="red slide-up">Arquitetura Agêntica</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Um modelo onde <strong>agentes de IA autônomos</strong> são responsáveis por domínios
+      específicos da operação, comunicando-se via eventos e atuando sobre o cluster.
+    </p>
+    <div class="two-col slide-up-d2">
+      <div class="col">
+        <h4>🧩 Princípios</h4>
+        <ul>
+          <li>Cada agente é especialista em um domínio</li>
+          <li>Comunicação assíncrona via Kafka</li>
+          <li>Acesso ao cluster via MCP (Model Context Protocol)</li>
+          <li>Decisões baseadas em contexto + LLM</li>
+          <li>Loop de feedback contínuo</li>
+          <li>Fallback humano para ações críticas</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>⚙️ Stack Tecnológica</h4>
+        <ul>
+          <li>OpenShift / Kubernetes — plataforma de clusters</li>
+          <li>Apache Kafka — barramento de eventos</li>
+          <li>MCP — protocolo de comunicação agente-cluster</li>
+          <li>LLMs — raciocínio e tomada de decisão</li>
+          <li>Prometheus + Grafana — observabilidade</li>
+          <li>ArgoCD — GitOps e deploy contínuo</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">04</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 4 — SQUAD + ORCHESTRATOR ══════ -->
+  <section class="slide" data-index="4">
+    <span class="rh-badge slide-up">Orquestração</span>
+    <h2 class="red slide-up">🧑‍🤝‍🧑 Squad de Operação</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Um squad de operações composto por agentes especializados, cada um responsável
+      por um domínio crítico — orquestrados por um agente central que coordena decisões
+      e mantém a visão holística do ecossistema.
+    </p>
+    <div class="two-col slide-up-d2">
+      <div class="col">
+        <h4>🎯 Orquestrador Central</h4>
+        <ul>
+          <li>Visão holística de todos os clusters</li>
+          <li>Coordenação e priorização de ações</li>
+          <li>Comunicação entre agentes especializados</li>
+          <li>Decisões críticas com fallback humano</li>
+          <li>Memória de longo prazo (incidentes, padrões)</li>
+          <li>Interface única para o time de plataforma</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>🔌 Conexões</h4>
+        <ul>
+          <li>MCP ↔ Clusters Kubernetes / OpenShift</li>
+          <li>Kafka ↔ Agentes especializados</li>
+          <li>API REST ↔ Dashboards e ferramentas</li>
+          <li>Slack/Teams ↔ Notificações humanas</li>
+          <li>GitOps ↔ ArgoCD para deploy contínuo</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">05</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 5 — MCP ══════ -->
+  <section class="slide" data-index="5">
+    <span class="rh-badge slide-up">Protocolo</span>
+    <h2 class="red slide-up">🔌 MCP — Model Context Protocol</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      O <strong>Model Context Protocol</strong> é a ponte que permite agentes de IA interagirem
+      diretamente com clusters Kubernetes de forma segura e estruturada.
+    </p>
+    <div class="arch slide-up-d2" style="gap:.3rem;">
+      <div class="arch-row">
+        <div class="arch-box rh big">🧑‍🤝‍🧑 Agentes</div>
+        <div class="arch-arrow">⟷</div>
+        <div class="arch-box blue big">MCP Server</div>
+        <div class="arch-arrow">⟷</div>
+        <div class="arch-box big">☸️ OpenShift<br><span class="sub">Cluster K8s</span></div>
+      </div>
+    </div>
+    <div class="two-col slide-up-d3">
+      <div class="col">
+        <h4>📡 O que o MCP expõe</h4>
+        <ul>
+          <li><code>list_resources</code> — namespaces, pods, deployments</li>
+          <li><code>read_resource</code> — estado detalhado de recursos</li>
+          <li><code>call_tool</code> — executa comandos (scale, rollout, etc.)</li>
+          <li><code>list_prompts</code> — templates de diagnóstico</li>
+          <li>Descoberta dinâmica de capacidades do cluster</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>🔒 Segurança</h4>
+        <ul>
+          <li>RBAC — acesso granular por agente</li>
+          <li>Auditoria — toda ação é logada</li>
+          <li>Service Accounts dedicadas por agente</li>
+          <li>Network Policies para isolamento</li>
+          <li>Aprovação humana para ações destrutivas</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">06</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 6 — KAFKA ══════ -->
+  <section class="slide" data-index="6">
+    <span class="rh-badge slide-up">Eventos</span>
+    <h2 class="red slide-up">📨 Kafka — A Espinha Dorsal</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Apache Kafka conecta <strong>todos</strong> os componentes: clusters publicam eventos,
+      agentes consomem o que lhes interessa, e comandos fluem de volta.
+    </p>
+    <div class="cards slide-up-d2">
+      <div class="card">
+        <div class="icon">📊</div>
+        <h4><code>cluster.metrics</code></h4>
+        <p>Métricas em tempo real: CPU, memória, rede, pods pending, nós</p>
+      </div>
+      <div class="card">
+        <div class="icon">🚨</div>
+        <h4><code>cluster.alerts</code></h4>
+        <p>Alertas: OOMKill, CrashLoopBackOff, NodeNotReady, DiskPressure</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔄</div>
+        <h4><code>cluster.events</code></h4>
+        <p>Eventos K8s: deployments, rollouts, node drains, scale events</p>
+      </div>
+      <div class="card">
+        <div class="icon">⚡</div>
+        <h4><code>agent.commands</code></h4>
+        <p>Ações dos agentes: scale, drain, rollout restart, patch</p>
+      </div>
+      <div class="card">
+        <div class="icon">🧠</div>
+        <h4><code>agent.reasoning</code></h4>
+        <p>Raciocínio: diagnósticos, decisões, explicações</p>
+      </div>
+      <div class="card">
+        <div class="icon">📝</div>
+        <h4><code>agent.feedback</code></h4>
+        <p>Resultados das ações, métricas pós-ação, aprendizado</p>
+      </div>
+    </div>
+    <div class="slide-number">07</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 7 — SECURITY AGENT ══════ -->
+  <section class="slide" data-index="7">
+    <span class="rh-badge slide-up">Agente de Segurança</span>
+    <h2 class="red slide-up">🛡️ Security Agent</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Agente especializado em <strong>segurança de clusters</strong> — monitora vulnerabilidades,
+      detecta ameaças em tempo real e garante compliance contínuo.
+    </p>
+    <div class="two-col slide-up-d2">
+      <div class="col">
+        <h4>🔍 Capacidades</h4>
+        <ul>
+          <li>Varredura contínua de vulnerabilidades (CVEs)</li>
+          <li>Detecção de acessos suspeitos e anomalias de RBAC</li>
+          <li>Análise de network policies e tráfego entre pods</li>
+          <li>Monitoramento de compliance (CIS Benchmarks)</li>
+          <li>Investigação autônoma de incidentes</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>⚡ Ações</h4>
+        <ul>
+          <li>Isolamento automático de workloads comprometidas</li>
+          <li>Revogação de acessos anômalos em tempo real</li>
+          <li>Geração de relatórios de compliance</li>
+          <li>Recomendação de patches e correções</li>
+          <li>Notificação via Kafka para orquestrador central</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">08</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 8 — OPTIMIZATION AGENT ══════ -->
+  <section class="slide" data-index="8">
+    <span class="rh-badge slide-up">Agente de Otimização</span>
+    <h2 class="red slide-up">📈 Optimization Agent</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Agente focado em <strong>performance e custo</strong> — analisa padrões de uso, identifica
+      ineficiências e otimiza a alocação de recursos continuamente.
+    </p>
+    <div class="two-col slide-up-d2">
+      <div class="col">
+        <h4>📈 Capacidades</h4>
+        <ul>
+          <li>Análise de utilização de CPU, memória, storage e rede</li>
+          <li>Detecção de recursos ociosos e superdimensionados</li>
+          <li>Identificação de padrões de carga (sazonalidade)</li>
+          <li>Recomendação de rightsizing de requests/limits</li>
+          <li>Análise de custo por namespace, workload, equipe</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>⚡ Ações</h4>
+        <ul>
+          <li>Ajuste automático de HPA e VPA baseado em tendências</li>
+          <li>Recomendação de spot instances e node pools</li>
+          <li>Desfragmentação de pods (bin packing otimizado)</li>
+          <li>Desligamento de ambientes não-produtivos em horários ociosos</li>
+          <li>Relatórios de economia gerados automaticamente</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">09</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 9 — OPERATIONS AGENT ══════ -->
+  <section class="slide" data-index="9">
+    <span class="rh-badge slide-up">Agente de Operações</span>
+    <h2 class="red slide-up">🔧 Operations Agent</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Agente de <strong>operação e self-healing</strong> — monitora a saúde dos clusters,
+      diagnostica incidentes e executa ações corretivas automaticamente.
+    </p>
+    <div class="two-col slide-up-d2">
+      <div class="col">
+        <h4>🔧 Capacidades</h4>
+        <ul>
+          <li>Monitoramento contínuo de health checks e probes</li>
+          <li>Diagnóstico inteligente de CrashLoopBackOff, OOMKill</li>
+          <li>Análise de golden signals (latência, tráfego, erros)</li>
+          <li>Correlação entre métricas, logs e eventos</li>
+          <li>Post-mortem automático pós-incidente</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>⚡ Ações</h4>
+        <ul>
+          <li>Rollout restart de deployments problemáticos</li>
+          <li>Drain seguro de nós não-saudáveis</li>
+          <li>Scale up/down automático baseado em demanda real</li>
+          <li>Ajuste de resource limits baseado em histórico</li>
+          <li>Escalonamento para orquestrador em ações críticas</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">10</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 10 — DIAGRAMA ANIMADO ══════ -->
+  <section class="slide" data-index="10">
+    <span class="rh-badge slide-up">Arquitetura</span>
+    <h2 class="red slide-up">🏗️ Fluxo de Dados na Arquitetura</h2>
+    <p class="slide-up-d1" style="font-size:.85rem;color:#888;margin-bottom:.3rem;">
+      OpenShift → Kafka → Agentes → Decisão → Ação
+    </p>
+
+    <div class="arch-diagram" id="archDiagram">
+      <canvas id="archCanvas"></canvas>
+
+      <!-- OpenShift Box -->
+      <div class="label openshift-box" style="position:absolute;">
+        <span class="icon">☸️</span>
+        <strong>OpenShift</strong>
+        <span class="sub">Clusters Kubernetes</span>
+        <div class="inner">📊 Métricas</div>
+        <div class="inner highlight">🚨 Alertas</div>
+        <div class="inner">🔄 Eventos</div>
+      </div>
+
+      <!-- Kafka Box -->
+      <div class="label kafka-box" style="position:absolute;">
+        <span class="icon">📨</span>
+        <strong>Apache Kafka</strong>
+        <span class="topic">cluster.metrics</span>
+        <span class="topic">cluster.alerts</span>
+        <span class="topic">cluster.events</span>
+        <span class="topic">agent.commands</span>
+        <span class="topic">agent.feedback</span>
+      </div>
+
+      <!-- Agent boxes -->
+      <div class="label agent-box orch" style="position:absolute;">
+        <span class="icon">🧠</span>
+        <strong>Orchestrator</strong>
+        <span class="badge">Coordenação</span>
+      </div>
+      <div class="label agent-box sec" style="position:absolute;">
+        <span class="icon">🛡️</span>
+        <strong>Security</strong>
+        <span class="badge">Segurança</span>
+      </div>
+      <div class="label agent-box opt" style="position:absolute;">
+        <span class="icon">📈</span>
+        <strong>Optimization</strong>
+        <span class="badge">Otimização</span>
+      </div>
+      <div class="label agent-box ops" style="position:absolute;">
+        <span class="icon">🔧</span>
+        <strong>Operations</strong>
+        <span class="badge">Self-Healing</span>
+      </div>
+    </div>
+    <div class="slide-number">11</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 11 — FLUXO DE OPERAÇÃO ══════ -->
+  <section class="slide" data-index="11">
+    <span class="rh-badge slide-up">Fluxo</span>
+    <h2 class="red slide-up">🔄 Ciclo de Operação</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Como um incidente é detectado, diagnosticado e resolvido — tudo automaticamente.
+    </p>
+    <div class="flow-diagram slide-up-d2">
+      <div class="flow-row">
+        <div class="flow-box dark-bg">☸️ OpenShift</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box dark-bg highlight">🚨 Alerta</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box blue-bg">📨 Kafka</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box rh-bg">🔧 Operations</div>
+      </div>
+      <div style="color:#555;font-size:.7rem;font-family:'JetBrains Mono',monospace;">① Incidente detectado · ② Publicado no tópico cluster.alerts · ③ Operations Agent recebe</div>
+
+      <div class="flow-row" style="margin-top:.5rem;">
+        <div class="flow-box rh-bg">🔧 Operations</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box blue-bg">📨 Kafka</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box rh-bg">🧠 Orchestrator</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box rh-bg">🛡️ Security</div>
+      </div>
+      <div style="color:#555;font-size:.7rem;font-family:'JetBrains Mono',monospace;">④ Diagnóstico inicial · ⑤ Orquestrador avalia criticidade · ⑥ Agentes colaboram via Kafka</div>
+
+      <div class="flow-row" style="margin-top:.5rem;">
+        <div class="flow-box rh-bg">🧠 Orchestrator</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box blue-bg">📨 Kafka</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box rh-bg">🔧 Operations</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box dark-bg highlight">☸️ OpenShift</div>
+      </div>
+      <div style="color:#555;font-size:.7rem;font-family:'JetBrains Mono',monospace;">⑦ Decisão tomada · ⑧ Comando publicado · ⑨ Ação executada via MCP</div>
+    </div>
+    <div class="quote slide-up-d3" style="max-width:600px;">
+      "Do evento à resolução em segundos — sem Pages, sem war rooms, sem estresse."
+    </div>
+    <div class="slide-number">12</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 12 — COMO COMEÇAR ══════ -->
+  <section class="slide" data-index="12">
+    <span class="rh-badge slide-up">Primeiros Passos</span>
+    <h2 class="red slide-up">🚀 Como Começar</h2>
+    <p class="slide-up-d1" style="max-width:700px;">
+      Da prova de conceito à produção — um roadmap prático com tecnologias Red Hat.
+    </p>
+    <div class="timeline slide-up-d2">
+      <div class="timeline-item">
+        <div class="date">Fase 1 · Fundação</div>
+        <div class="desc">OpenShift + Red Hat AMQ Streams (Kafka) + Operations Agent + MCP Server. Prova de conceito com auto-healing simples.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="date">Fase 2 · Expansão</div>
+        <div class="desc">+ Security Agent + Optimization Agent · Tópicos Kafka maduros · Dashboards · Ações com aprovação humana.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="date">Fase 3 · Orquestração</div>
+        <div class="desc">Orquestrador central integrado · Memória compartilhada · Colaboração entre agentes · Post-mortem automáticos.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="date">Fase 4 · Autônomo</div>
+        <div class="desc">Operação totalmente autônoma · Agentes antecipam falhas · Otimização contínua · SLA auto-gerenciado.</div>
+      </div>
+    </div>
+    <div class="slide-number">13</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 13 — STACK RED HAT ══════ -->
+  <section class="slide" data-index="13">
+    <span class="rh-badge slide-up">Stack Red Hat</span>
+    <h2 class="red slide-up">📦 Tecnologias Red Hat na Arquitetura</h2>
+    <div class="agent-cards slide-up-d1">
+      <div class="agent-card">
+        <div class="icon">☸️</div>
+        <h4>OpenShift</h4>
+        <div class="role">Plataforma de Containers</div>
+        <p>Kubernetes enterprise da Red Hat com segurança, operadores e multicluster.</p>
+      </div>
+      <div class="agent-card">
+        <div class="icon">📨</div>
+        <h4>AMQ Streams</h4>
+        <div class="role">Apache Kafka</div>
+        <p>Barramento de eventos enterprise gerenciado pela Red Hat com suporte nativo.</p>
+      </div>
+      <div class="agent-card">
+        <div class="icon">🛡️</div>
+        <h4>ACS / RHACM</h4>
+        <div class="role">Segurança & Gestão</div>
+        <p>Advanced Cluster Security + Advanced Cluster Management para governança.</p>
+      </div>
+      <div class="agent-card">
+        <div class="icon">📊</div>
+        <h4>OpenShift AI</h4>
+        <div class="role">ML/AI Integrado</div>
+        <p>Treinamento e deploy de modelos de ML para anomalias e previsões.</p>
+      </div>
+      <div class="agent-card">
+        <div class="icon">🔗</div>
+        <h4>OpenShift Pipelines</h4>
+        <div class="role">CI/CD</div>
+        <p>Tekton-based pipelines para deploy contínuo dos próprios agentes.</p>
+      </div>
+      <div class="agent-card">
+        <div class="icon">📡</div>
+        <h4>OpenTelemetry</h4>
+        <div class="role">Observabilidade</div>
+        <p>Métricas, logs e traces unificados para os agentes consumirem.</p>
+      </div>
+    </div>
+    <div class="slide-number">14</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 14 — IMPACTO ══════ -->
+  <section class="slide" data-index="14">
+    <span class="rh-badge slide-up">Resultados</span>
+    <h2 class="red slide-up">📊 Impacto Esperado</h2>
+    <div class="stats slide-up-d1">
+      <div class="stat">
+        <div class="stat-num">-80%</div>
+        <div class="stat-label">Incidentes Não-Tratados</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">-60%</div>
+        <div class="stat-label">Custo Operacional</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">-90%</div>
+        <div class="stat-label">MTTR</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">+40%</div>
+        <div class="stat-label">Utilização de Recursos</div>
+      </div>
+    </div>
+    <div class="cards slide-up-d2">
+      <div class="card">
+        <div class="icon">👨‍💻</div>
+        <h4>SRE Aumentado</h4>
+        <p>O time de plataforma vira orquestrador de agentes, não operador manual.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🧠</div>
+        <h4>Memória Institucional</h4>
+        <p>Agentes aprendem com cada incidente. O conhecimento nunca mais se perde.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔓</div>
+        <h4>Open Source</h4>
+        <p>Tudo construído com stacks open-source da Red Hat. Zero lock-in.</p>
+      </div>
+    </div>
+    <div class="slide-number">15</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ══════ SLIDE 15 — CTA ══════ -->
+  <section class="slide cover" data-index="15">
+    <div class="logo-rh slide-up" style="display:flex;align-items:center;justify-content:center;gap:.8rem;margin-bottom:.5rem;">
+      <img src="./redhat-logo.png" style="height:160px;border-radius:8px;background:rgba(255,255,255,.95);padding:12px 24px;box-shadow:0 0 30px rgba(238,0,0,.2);" alt="Red Hat">
+    </div>
+    <h1 class="red slide-up" style="font-size:clamp(2rem,4vw,3.5rem);">Vamos Construir Agentes</h1>
+    <p class="slide-up-d1" style="max-width:600px;font-size:1.05rem;">
+      Red Hat + Kafka + MCP + Agentes<br>
+      A stack definitiva para operar clusters com inteligência artificial.
+    </p>
+    <div class="stats slide-up-d2" style="margin-top:1.5rem;">
+      <div class="stat"><div class="stat-num">☸️</div><div class="stat-label">OpenShift</div></div>
+      <div class="stat"><div class="stat-num">📨</div><div class="stat-label">AMQ Streams</div></div>
+      <div class="stat"><div class="stat-num">🧠</div><div class="stat-label">Agentes IA</div></div>
+    </div>
+    <div class="quote slide-up-d3" style="max-width:500px;">
+      "O futuro da infraestrutura é autônomo. E começa com open-source."
+    </div>
+    <p style="margin-top:1.5rem;font-size:.85rem;color:#888;">
+      <strong>Luciano Scorsin</strong> · Arquiteto de Soluções · Red Hat
+    </p>
+    <div class="slide-number">16</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- SLIDE 16 — ARQUITETURA MULTI-AGENTE + ROLETA -->
+  <!-- ════════════════════════════════════════ -->
+  <section class="slide" data-index="16" style="padding:2rem 3rem;">
+    <div class="tagline slide-up" style="font-size:.7rem;margin-bottom:.3rem;color:var(--rh-red-light);">RED HAT · LIVE DEMO · ARQUITETURA AGÊNTICA</div>
+    <div style="margin-bottom:.5rem;">
+      <img src="./redhat-logo.png" style="height:70px;border-radius:8px;background:rgba(255,255,255,.95);padding:8px 16px;box-shadow:0 0 30px rgba(238,0,0,.2);" alt="Red Hat">
+    </div>
+    <h2 class="red slide-up" style="font-size:clamp(1.5rem,2.5vw,2.2rem);margin-bottom:.5rem;">
+      Multi-Agentes Autônomos para Infraestrutura
+    </h2>
+
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:1.5rem;width:100%;max-width:1100px;margin-top:.5rem;">
+
+      <!-- LEFT: Architecture info -->
+      <div style="text-align:left;">
+        <p style="font-size:.8rem;color:#aaa;margin-bottom:.3rem;">
+          Agentes especializados · Kafka · MCP · <strong>DeepSeek LLM</strong>
+        </p>
+        <div style="border-radius:10px;overflow:hidden;border:1px solid rgba(238,0,0,.3);margin-bottom:.3rem;">
+          <img src="./arch-diagram.jpg" style="width:100%;display:block;" alt="Arquitetura">
+        </div>
+        <div style="display:flex;gap:.5rem;font-size:.7rem;color:#888;">
+          <span>🛡️ Security Agent</span>
+          <span>📈 Optimization Agent</span>
+          <span>🔧 Operations Agent</span>
+          <span>😈 Troublemaker</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: Roulette -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
+        <div style="font-size:.8rem;color:var(--rh-red-light);font-weight:700;text-transform:uppercase;letter-spacing:.1em;">🎰 Roleta da Demo</div>
+        
+        <!-- Roulette wheel -->
+        <div style="position:relative;width:220px;height:220px;border-radius:50%;border:4px solid var(--rh-red);overflow:hidden;">
+          <canvas id="rouletteCanvas" width="440" height="440" style="width:100%;height:100%;"></canvas>
+          <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:24px;color:var(--rh-red);">▼</div>
+        </div>
+
+        <!-- Selected problem -->
+        <div id="rouletteResult" style="font-size:.85rem;font-weight:700;color:#fff;min-height:2rem;text-align:center;"></div>
+        <div id="rouletteAction" style="font-size:.7rem;color:#888;min-height:1.5rem;text-align:center;"></div>
+
+        <!-- Spin button -->
+        <button id="spinBtn" onclick="spinRoulette()" 
+          style="padding:.6rem 2rem;border-radius:30px;border:none;background:linear-gradient(135deg,var(--rh-red),var(--rh-red-dark));color:white;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.05em;transition:all .2s;">
+          🎰 GIRAR!
+        </button>
+
+        <!-- Auto-fix toggle -->
+        <label style="font-size:.65rem;color:#888;display:flex;align-items:center;gap:.3rem;cursor:pointer;">
+          <input type="checkbox" id="autoFix" checked> Auto-resolver com agentes
+        </label>
+      </div>
+
+    </div>
+    <div class="slide-number">17</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+  <!-- ════════════════════════════════════════ -->
+  <!-- SLIDE 17 — ROLETA PURA -->
+  <!-- ════════════════════════════════════════ -->
+  <section class="slide cover" data-index="17" style="gap:1rem;">
+    <div style="margin-bottom:.5rem;">
+      <img src="./redhat-logo.png" style="height:80px;border-radius:8px;background:rgba(255,255,255,.95);padding:8px 16px;box-shadow:0 0 30px rgba(238,0,0,.2);" alt="Red Hat">
+    </div>
+    <h1 class="red slide-up" style="font-size:clamp(2rem,4vw,3.5rem);font-weight:900;text-align:center;line-height:1.2;">
+      🎰 Gire a Roleta da Sorte<br>
+      <span style="font-size:clamp(1.2rem,2.5vw,2.2rem);color:#fff;">Ganhe Prêmios ou Crie Problemas!</span>
+    </h1>
+    <p class="slide-up-d1" style="color:#aaa;font-size:1rem;max-width:600px;text-align:center;">
+      Cada giro gera um problema real no cluster OpenShift.<br>
+      Os agentes detectam, analisam e resolvem automaticamente.
+    </p>
+    <div class="slide-up-d2" style="width:260px;height:260px;border-radius:50%;border:4px solid var(--rh-red);overflow:hidden;margin:.5rem auto;box-shadow:0 0 60px rgba(238,0,0,.2);">
+      <canvas id="rouletteCanvas2" width="560" height="560" style="width:100%;height:100%;display:block;"></canvas>
+    </div>
+    <div id="rouletteResult2" style="font-size:1.2rem;font-weight:700;color:#fff;min-height:2rem;text-align:center;"></div>
+    <button id="spinBtn2" onclick="spinRoulette2()"
+      style="padding:.8rem 3rem;border-radius:40px;border:none;background:linear-gradient(135deg,var(--rh-red),var(--rh-red-dark));color:white;font-size:1.3rem;font-weight:900;cursor:pointer;letter-spacing:.08em;transition:all .2s;box-shadow:0 0 30px rgba(238,0,0,.3);">
+      🎰 GIRAR AGORA!
+    </button>
+    <div class="slide-number">18</div>
+    <div class="rh-watermark">Red Hat</div>
+  </section>
+</div><!-- /slides -->
+
+<nav class="nav-bar" id="navBar">
+  <button onclick="prevSlide()" title="Anterior">◀</button>
+  <span class="slide-info" id="slideInfo">01 / 18</span>
+  <div class="dots" id="dots"></div>
+  <button onclick="nextSlide()" title="Próximo">▶</button>
+  <button onclick="goFullscreen()" title="Tela cheia">⛶</button>
+</nav>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const container = document.getElementById('slides');
+  let archAnimId = null;
+
+  const indexData = [
+    "Capa",
+    "O Desafio",
+    "A Visão",
+    "Arquitetura Agêntica",
+    "Squad de Operação",
+    "🔌 MCP — Model Context Protocol",
+    "📨 Kafka — Event Bus",
+    "🛡️ Security Agent",
+    "📈 Optimization Agent",
+    "🔧 Operations Agent",
+    "🏗️ Diagrama Animado",
+    "🔄 Ciclo de Operação",
+    "🚀 Como Começar",
+    "📦 Stack Red Hat",
+    "📊 Impacto",
+    "🏁 Vamos Construir",
+    "🏗️ Multi-Agentes Autônomos",
+    "🎰 Roleta da Sorte"
+  ];
+
+  function updateSlide() {
+    container.style.transform = `translateX(-${current * 100}vw)`;
+    document.getElementById('slideInfo').textContent =
+      `${String(current+1).padStart(2,'0')} / ${String(total).padStart(2,'0')}`;
+    document.getElementById('progress').style.width = `${((current+1)/total)*100}%`;
+
+    slides.forEach((s, i) => {
+      s.classList.toggle('active', i === current);
+    });
+
+    document.querySelectorAll('.dot').forEach((d, i) => {
+      d.classList.toggle('active', i === current);
+    });
+
+    // Start/stop architecture animation
+    if (current === 10) {
+      if (!archAnimId) startArchAnimation();
+    } else {
+      if (archAnimId) {
+        cancelAnimationFrame(archAnimId);
+        archAnimId = null;
+      }
+    }
+
+    closeSidebar();
+  }
+
+  function nextSlide() { if (current < total - 1) { current++; updateSlide(); } }
+  function prevSlide() { if (current > 0) { current--; updateSlide(); } }
+  function goToSlide(n) { if (n >= 0 && n < total) { current = n; updateSlide(); } }
+  function goFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  // Sidebar
+  function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('open'); }
+  function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
+  document.getElementById('sidebarToggle').addEventListener('click', openSidebar);
+  document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
+  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
+  // Build dots
+  const dotsContainer = document.getElementById('dots');
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.onclick = () => { current = i; updateSlide(); };
+    dotsContainer.appendChild(dot);
+  }
+
+  // Build sidebar index
+  const indexList = document.getElementById('indexList');
+  indexData.forEach((label, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'index-item';
+    btn.innerHTML = `<span class="num">${String(i+1).padStart(2,'0')}</span> ${label}`;
+    btn.onclick = () => { goToSlide(i); };
+    indexList.appendChild(btn);
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault(); nextSlide();
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault(); prevSlide();
+    }
+    if (e.key === 'Home') { current = 0; updateSlide(); }
+    if (e.key === 'End') { current = total - 1; updateSlide(); }
+    if (e.key === 'f' || e.key === 'F') goFullscreen();
+    if (e.key === 'Escape') closeSidebar();
+  });
+
+  // Click/tap on slide
+  slides.forEach((slide, i) => {
+    slide.addEventListener('click', e => {
+      if (e.target.closest('.nav-bar') || e.target.closest('.sidebar') || e.target.closest('.sidebar-toggle')) return;
+      const rect = slide.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      if (x > rect.width * 0.7) { nextSlide(); }
+      else if (x < rect.width * 0.3) { prevSlide(); }
+    });
+  });
+
+  // Touch
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { if (diff > 0) nextSlide(); else prevSlide(); }
+  });
+
+  // ── Background particles ──
+  const bgCanvas = document.getElementById('particles');
+  const bgCtx = bgCanvas.getContext('2d');
+  let bgParticles = [];
+
+  function resizeBgCanvas() {
+    bgCanvas.width = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
+  }
+  resizeBgCanvas();
+  window.addEventListener('resize', resizeBgCanvas);
+
+  class BgParticle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x = Math.random() * bgCanvas.width;
+      this.y = Math.random() * bgCanvas.height;
+      this.size = Math.random() * 2 + 0.5;
+      this.speedX = (Math.random() - 0.5) * 0.3;
+      this.speedY = (Math.random() - 0.5) * 0.3;
+      this.opacity = Math.random() * 0.5 + 0.1;
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+      if (this.x < 0 || this.x > bgCanvas.width) this.speedX *= -1;
+      if (this.y < 0 || this.y > bgCanvas.height) this.speedY *= -1;
+    }
+    draw() {
+      bgCtx.beginPath();
+      bgCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      bgCtx.fillStyle = `rgba(238, 0, 0, ${this.opacity})`;
+      bgCtx.fill();
+    }
+  }
+  for (let i = 0; i < 60; i++) bgParticles.push(new BgParticle());
+
+  function animateBgParticles() {
+    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    bgParticles.forEach(p => { p.update(); p.draw(); });
+    for (let i = 0; i < bgParticles.length; i++) {
+      for (let j = i + 1; j < bgParticles.length; j++) {
+        const dx = bgParticles[i].x - bgParticles[j].x;
+        const dy = bgParticles[i].y - bgParticles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 120) {
+          bgCtx.beginPath();
+          bgCtx.moveTo(bgParticles[i].x, bgParticles[i].y);
+          bgCtx.lineTo(bgParticles[j].x, bgParticles[j].y);
+          bgCtx.strokeStyle = `rgba(238, 0, 0, ${0.06 * (1 - dist/120)})`;
+          bgCtx.lineWidth = 0.5;
+          bgCtx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(animateBgParticles);
+  }
+  animateBgParticles();
+
+  // ═══════════════════════════════════════════
+  //  ANIMATED ARCHITECTURE DIAGRAM (Slide 10)
+  // ═══════════════════════════════════════════
+  function startArchAnimation() {
+    const canvas = document.getElementById('archCanvas');
+    if (!canvas) return;
+    const container = document.getElementById('archDiagram');
+    if (!container) return;
+
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+    const ctx = canvas.getContext('2d');
+
+    // Layout positions (as fractions of container size)
+    const layout = {
+      // OpenShift -> Kafka -> Agents
+      openshiftRight: { x: 0.195, yTop: 0.12, yBot: 0.88 },
+      kafkaLeft: { x: 0.265, yCenter: 0.5 },
+      kafkaRight: { x: 0.49, yCenter: 0.5 },
+      agentsLeft: { x: 0.53 },
+      // Individual agent centers
+      orch: { x: 0.62, y: 0.16 },
+      sec:  { x: 0.62, y: 0.44 },
+      opt:  { x: 0.62, y: 0.76 },
+      ops:  { x: 0.82, y: 0.44 },
+      // Command back arrow target
+      commandTarget: { x: 0.265, y: 0.5 }
+    };
+
+    let dataDots = [];
+    const DOT_COUNT = 18;
+    const DOT_SPEED = 0.004;
+    const AGENT_COLORS = ['#EE0000', '#0066CC', '#88C0D0', '#FF6666'];
+
+    // Initialize data dots
+    for (let i = 0; i < DOT_COUNT; i++) {
+      const type = i < 8 ? 'cluster-to-kafka' : (i < 14 ? 'kafka-to-agents' : 'agents-to-kafka');
+      dataDots.push({
+        type: type,
+        progress: Math.random(),
+        speed: DOT_SPEED * (0.8 + Math.random() * 0.4),
+        color: AGENT_COLORS[i % AGENT_COLORS.length],
+        size: 2 + Math.random() * 2,
+        opacity: 0.4 + Math.random() * 0.5
+      });
+    }
+
+    // Agent-to-agent communication dots
+    let interAgentDots = [];
+    const INTER_DOT_COUNT = 6;
+    for (let i = 0; i < INTER_DOT_COUNT; i++) {
+      interAgentDots.push({
+        from: ['orch', 'sec', 'opt', 'ops', 'orch', 'sec'][i],
+        to: ['sec', 'opt', 'ops', 'orch', 'ops', 'orch'][i],
+        progress: Math.random(),
+        speed: DOT_SPEED * (0.6 + Math.random() * 0.3),
+        color: '#88C0D0',
+        size: 1.5 + Math.random() * 1.5
+      });
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function getPos(from, to, t) {
+      return { x: lerp(from.x, to.x, t), y: lerp(from.y, to.y, t) };
+    }
+
+    function drawArchFrame() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // ── Draw flow arrows (static lines) ──
+      ctx.strokeStyle = 'rgba(238, 0, 0, 0.12)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+
+      // OpenShift -> Kafka
+      const oR = layout.openshiftRight.x * w;
+      const kL = layout.kafkaLeft.x * w;
+      const kY = layout.kafkaLeft.yCenter * h;
+      ctx.beginPath();
+      ctx.moveTo(oR, 0.3 * h);
+      ctx.lineTo(kL, kY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(oR, 0.5 * h);
+      ctx.lineTo(kL, kY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(oR, 0.7 * h);
+      ctx.lineTo(kL, kY);
+      ctx.stroke();
+
+      // Kafka -> Agents
+      const kR = layout.kafkaRight.x * w;
+      ctx.strokeStyle = 'rgba(0, 102, 204, 0.12)';
+      ctx.beginPath();
+      ctx.moveTo(kR, kY);
+      ctx.lineTo(layout.orch.x * w, layout.orch.y * h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(kR, kY);
+      ctx.lineTo(layout.sec.x * w, layout.sec.y * h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(kR, kY);
+      ctx.lineTo(layout.opt.x * w, layout.opt.y * h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(kR, kY);
+      ctx.lineTo(layout.ops.x * w, layout.ops.y * h);
+      ctx.stroke();
+
+      // Agent-to-agent lines
+      ctx.strokeStyle = 'rgba(136, 192, 208, 0.1)';
+      ctx.setLineDash([4, 6]);
+      const agentPositions = {
+        orch: { x: layout.orch.x * w, y: layout.orch.y * h },
+        sec: { x: layout.sec.x * w, y: layout.sec.y * h },
+        opt: { x: layout.opt.x * w, y: layout.opt.y * h },
+        ops: { x: layout.ops.x * w, y: layout.ops.y * h }
+      };
+      ctx.beginPath();
+      ctx.moveTo(agentPositions.orch.x, agentPositions.orch.y);
+      ctx.lineTo(agentPositions.sec.x, agentPositions.sec.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(agentPositions.orch.x, agentPositions.orch.y);
+      ctx.lineTo(agentPositions.ops.x, agentPositions.ops.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(agentPositions.sec.x, agentPositions.sec.y);
+      ctx.lineTo(agentPositions.opt.x, agentPositions.opt.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(agentPositions.opt.x, agentPositions.opt.y);
+      ctx.lineTo(agentPositions.ops.x, agentPositions.ops.y);
+      ctx.stroke();
+
+      // Commands back arrow (Kafka -> OpenShift)
+      ctx.strokeStyle = 'rgba(238, 0, 0, 0.2)';
+      ctx.setLineDash([8, 4]);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(kL * 0.95, kY);
+      ctx.lineTo(oR * 0.9, 0.85 * h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // ── Animated data dots ──
+      dataDots.forEach(dot => {
+        dot.progress += dot.speed;
+        if (dot.progress > 1) dot.progress -= 1;
+
+        let x, y;
+
+        if (dot.type === 'cluster-to-kafka') {
+          // From various points on OpenShift box to Kafka
+          const srcY = 0.25 * h + dot.progress * 0.5 * h;
+          x = lerp(oR, kL, dot.progress);
+          y = lerp(srcY, kY, dot.progress);
+        } else if (dot.type === 'kafka-to-agents') {
+          // From Kafka to one of the agents
+          const targets = [
+            { x: layout.orch.x * w, y: layout.orch.y * h },
+            { x: layout.sec.x * w, y: layout.sec.y * h },
+            { x: layout.opt.x * w, y: layout.opt.y * h },
+            { x: layout.ops.x * w, y: layout.ops.y * h }
+          ];
+          const tgt = targets[Math.floor(dot.progress * targets.length) % targets.length];
+          x = lerp(kR, tgt.x, dot.progress);
+          y = lerp(kY, tgt.y, dot.progress);
+        } else {
+          // Agents -> Kafka (commands/feedback)
+          const sources = [
+            { x: layout.orch.x * w, y: layout.orch.y * h },
+            { x: layout.sec.x * w, y: layout.sec.y * h },
+            { x: layout.opt.x * w, y: layout.opt.y * h },
+            { x: layout.ops.x * w, y: layout.ops.y * h }
+          ];
+          const src = sources[Math.floor(dot.progress * sources.length) % sources.length];
+          x = lerp(src.x, kR, dot.progress);
+          y = lerp(src.y, kY, dot.progress);
+        }
+
+        ctx.beginPath();
+        ctx.arc(x, y, dot.size, 0, Math.PI * 2);
+        ctx.fillStyle = dot.color;
+        ctx.globalAlpha = dot.opacity;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Glow effect
+        ctx.beginPath();
+        ctx.arc(x, y, dot.size * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = dot.color;
+        ctx.globalAlpha = 0.1;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+
+      // ── Agent-to-agent communication dots ──
+      interAgentDots.forEach(dot => {
+        dot.progress += dot.speed;
+        if (dot.progress > 1) dot.progress -= 1;
+
+        const from = agentPositions[dot.from];
+        const to = agentPositions[dot.to];
+        const x = lerp(from.x, to.x, dot.progress);
+        const y = lerp(from.y, to.y, dot.progress);
+
+        ctx.beginPath();
+        ctx.arc(x, y, dot.size, 0, Math.PI * 2);
+        ctx.fillStyle = dot.color;
+        ctx.globalAlpha = 0.6;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(x, y, dot.size * 2, 0, Math.PI * 2);
+        ctx.fillStyle = dot.color;
+        ctx.globalAlpha = 0.15;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+
+      archAnimId = requestAnimationFrame(drawArchFrame);
+    }
+
+    drawArchFrame();
+  }
+
+  updateSlide();
+
+  // Handle resize for arch canvas
+  window.addEventListener('resize', () => {
+    const canvas = document.getElementById('archCanvas');
+    const container = document.getElementById('archDiagram');
+    if (canvas && container && current === 10) {
+      canvas.width = container.offsetWidth;
+      canvas.height = container.offsetHeight;
+    }
+  });
+
+
+// ═══════════════════════════════════════════
+//  ROULETTE WHEEL - Booth Demo
+// ═══════════════════════════════════════════
+const ROULETTE_PROBLEMS = [
+  { label: "💥 CrashLoop", action: "crash", icon: "💥", type: "problem", desc: "Pod em CrashLoopBackOff" },
+  { label: "🏆 Cluster Otimizado!", action: "prize-opt", icon: "🏆", type: "prize", desc: "Recursos otimizados!" },
+  { label: "🧠 OOM Risk", action: "oom", icon: "🧠", type: "problem", desc: "Pod com risco de OOM" },
+  { label: "🛡️ Segurança Total!", action: "prize-sec", icon: "🛡️", type: "prize", desc: "Cluster seguro!" },
+  { label: "🛡️ Security Issue", action: "security", icon: "🔓", type: "problem", desc: "Pod com privilégios" },
+  { label: "⚡ Performance Máxima!", action: "prize-perf", icon: "⚡", type: "prize", desc: "Cluster voando!" },
+];
+
+const SEGMENT_COLORS = ["#EE0000", "#00CC66", "#A30000", "#0066CC", "#CC0000", "#FF8800"];
+let isSpinning = false;
+let rouletteAngle = 0;
+
+function drawRoulette() {
+  const canvas = document.getElementById("rouletteCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+  const cx = w/2, cy = h/2, r = Math.min(w,h)/2 - 10;
+  
+  ctx.clearRect(0,0,w,h);
+  const n = ROULETTE_PROBLEMS.length;
+  const seg = (2 * Math.PI) / n;
+  
+  for (let i = 0; i < n; i++) {
+    const startAngle = rouletteAngle + i * seg;
+    const endAngle = startAngle + seg;
+    
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Label
+    const midAngle = startAngle + seg/2;
+    const labelR = r * 0.6;
+    ctx.save();
+    ctx.translate(cx + Math.cos(midAngle) * labelR, cy + Math.sin(midAngle) * labelR);
+    ctx.rotate(midAngle + Math.PI/2);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 18px Red Hat Display, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(ROULETTE_PROBLEMS[i].icon, 0, 0);
+    ctx.restore();
+  }
+  
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+  ctx.fillStyle = "#333";
+  ctx.fill();
+  ctx.strokeStyle = "#EE0000";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function getSelectedProblem() {
+  const n = ROULETTE_PROBLEMS.length;
+  const seg = (2 * Math.PI) / n;
+  // The pointer is at the top (angle = -PI/2 in standard math)
+  // Normalize angle
+  let a = (-rouletteAngle - Math.PI/2) % (2 * Math.PI);
+  if (a < 0) a += 2 * Math.PI;
+  const idx = Math.floor(a / seg) % n;
+  return ROULETTE_PROBLEMS[idx];
+}
+
+async function spinRoulette() {
+  if (isSpinning) return;
+  isSpinning = true;
+  
+  const btn = document.getElementById("spinBtn");
+  const resultDiv = document.getElementById("rouletteResult");
+  const actionDiv = document.getElementById("rouletteAction");
+  
+  btn.disabled = true;
+  btn.textContent = "🎰 Girando...";
+  resultDiv.textContent = "";
+  actionDiv.textContent = "";
+  
+  // Spin animation
+  const targetAngle = rouletteAngle + (5 + Math.random() * 5) * 2 * Math.PI;
+  const duration = 3000;
+  const startAngle = rouletteAngle;
+  const startTime = performance.now();
+  
+  function animateSpin(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // Easing out cubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+    rouletteAngle = startAngle + (targetAngle - startAngle) * eased;
+    drawRoulette();
+    
+    if (progress < 1) {
+      requestAnimationFrame(animateSpin);
+    } else {
+      rouletteAngle = targetAngle;
+      drawRoulette();
+      onSpinComplete();
+    }
+  }
+  
+  function onSpinComplete() {
+    const problem = getSelectedProblem();
+    resultDiv.textContent = `${problem.icon} ${problem.label}`;
+    actionDiv.textContent = `${problem.action} detectará: ${problem.desc}`;
+    btn.textContent = "🎰 GIRAR!";
+    btn.disabled = false;
+    isSpinning = false;
+    
+    // Actually trigger the problem
+    triggerProblem(problem);
+  }
+  
+  requestAnimationFrame(animateSpin);
+}
+
+async function triggerProblem(problem) {
+  const actionDiv = document.getElementById("rouletteAction");
+  const autoFix = document.getElementById("autoFix")?.checked ?? true;
+  
+  actionDiv.textContent = `⚡ Criando: ${problem.desc}...`;
+  
+  try {
+    const resp = await fetch("https://mission-control-kafka.apps.bbdw.sandbox3066.opentlc.com/troublemaker/" + problem.action, {
+      method: "POST", mode: "cors", signal: AbortSignal.timeout(15000)
+    });
+    const data = await resp.json();
+    const resultText = data.result || JSON.stringify(data);
+    actionDiv.textContent = `✅ Problema criado! ${resultText.slice(0,60)}`;
+    
+    if (autoFix) {
+      setTimeout(async () => {
+        actionDiv.textContent = "🤖 Agentes analisando...";
+        try {
+          const chatResp = await fetch("https://agent-system-kafka.apps.bbdw.sandbox3066.opentlc.com/api/chat", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+              agent: problem.action === "security" ? "security" : "operations",
+              message: `Acabou de ser criado um problema no cluster: ${problem.desc} (${problem.label}). Analise e resolva.`
+            }),
+            signal: AbortSignal.timeout(30000)
+          });
+          const chatData = await chatResp.json();
+          const response = chatData.response || "";
+          actionDiv.textContent = "🧠 " + response.slice(0,120) + (response.length > 120 ? "..." : "");
+        } catch(e) {
+          actionDiv.textContent = "❌ Erro ao consultar agente";
+        }
+      }, 3000);
+    }
+  } catch(e) {
+    actionDiv.textContent = "❌ Erro: " + e.message;
+    btn.textContent = "🎰 GIRAR!";
+    btn.disabled = false;
+    isSpinning = false;
+  }
+}
+
+// Initialize roulette when slide 16 is active
+const origUpdateSlide = updateSlide;
+updateSlide = function() {
+  origUpdateSlide();
+  if (current === 16) {
+    setTimeout(() => { drawRoulette(); }, 100);
+  }
+  if (current === 17) {
+    setTimeout(() => { drawRoulette2(); }, 200);
+  }
+};
+
+// Also draw initial
+setTimeout(() => { drawRoulette2(); }, 500);
+
+// Redraw on resize
+window.addEventListener("resize", () => {
+  if (current === 16) drawRoulette();
+  if (current === 17) drawRoulette2();
+});
+
+
+// ═══════════════════════════════════════════
+//  ROULETTE 2 (Full screen slide) 
+// ═══════════════════════════════════════════
+let ra2 = 0;
+
+function drawRoulette2() {
+  const c2 = document.getElementById("rouletteCanvas2");
+  if (!c2) return;
+  c2.width = 560; c2.height = 560;
+  const ctx = c2.getContext("2d");
+  const w=560, h=560, cx=w/2, cy=h/2, r=Math.min(w,h)/2-12;
+  ctx.clearRect(0,0,w,h);
+  const n=ROULETTE_PROBLEMS.length, seg=2*Math.PI/n;
+  for(let i=0;i<n;i++) {
+    const sa=ra2+i*seg, ea=sa+seg;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,sa,ea); ctx.closePath();
+    ctx.fillStyle=SEGMENT_COLORS[i]; ctx.fill();
+    ctx.strokeStyle="#000"; ctx.lineWidth=3; ctx.stroke();
+    const ma=sa+seg/2;
+    ctx.save(); ctx.translate(cx+Math.cos(ma)*r*0.6, cy+Math.sin(ma)*r*0.6);
+    ctx.fillStyle="#fff"; ctx.font="bold 28px sans-serif"; ctx.textAlign="center";
+    ctx.fillText(ROULETTE_PROBLEMS[i].icon,0,0); ctx.restore();
+  }
+}
+
+window.spinRoulette2 = function() {
+    if (isSpinning) return;
+    isSpinning = true;
+    const btn = document.getElementById("spinBtn2");
+    const res = document.getElementById("rouletteResult2");
+    btn.disabled = true; btn.textContent = "🎰 Girando..."; res.textContent = "";
+    const target = ra2 + (5+Math.random()*5)*2*Math.PI;
+    const start = ra2, t0 = performance.now();
+    function anim(now) {
+      const p = Math.min((now-t0)/3000, 1), e = 1-Math.pow(1-p, 3);
+      ra2 = start + (target-start)*e; drawRoulette2();
+      if (p < 1) requestAnimationFrame(anim);
+      else {
+        ra2 = target; drawRoulette2();
+        const prob = getSelectedProblem();
+        res.innerHTML = prob.icon + " <strong>" + prob.label + "</strong>";
+        btn.textContent = "🎰 GIRAR AGORA!"; btn.disabled = false; isSpinning = false;
+        fetch("https://mission-control-kafka.apps.bbdw.sandbox3066.opentlc.com/troublemaker/"+prob.action, {method:"POST", signal:AbortSignal.timeout(15000)})
+          .then(r=>r.json()).then(d=>{
+            res.innerHTML += "<br><span style='font-size:.8rem;color:#8f8'>"+(d.result||"").slice(0,60)+"</span>";
+          }).catch(e=>{ res.innerHTML += "<br><span style='font-size:.8rem;color:#f88'>"+e.message+"</span>"; });
+      }
+    }
+    requestAnimationFrame(anim);
+  };
+</script>
+</body>
+</html>
