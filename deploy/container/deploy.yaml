@@ -1,0 +1,123 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openclaw-condo
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openclaw-condo-data
+  namespace: openclaw-condo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openclaw-condo
+  namespace: openclaw-condo
+  labels:
+    app: openclaw-condo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openclaw-condo
+  template:
+    metadata:
+      labels:
+        app: openclaw-condo
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: openclaw
+        image: image-registry.openshift-image-registry.svc:5000/openclaw-condo/openclaw-condo:latest
+        ports:
+        - containerPort: 18789
+          protocol: TCP
+        env:
+        - name: DEEPSEEK_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openclaw-condo-secrets
+              key: deepseek-api-key
+        - name: AGENT_NAME
+          value: "Condominio Agent"
+        - name: DEFAULT_MODEL
+          value: "deepseek/deepseek-chat"
+        - name: GATEWAY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: openclaw-condo-secrets
+              key: gateway-token
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 100m
+          limits:
+            memory: 1Gi
+            cpu: 500m
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 18789
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 18789
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: openclaw-condo-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openclaw-condo
+  namespace: openclaw-condo
+spec:
+  ports:
+  - port: 18789
+    targetPort: 18789
+    name: gateway
+  selector:
+    app: openclaw-condo
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: openclaw-condo
+  namespace: openclaw-condo
+spec:
+  to:
+    kind: Service
+    name: openclaw-condo
+  port:
+    targetPort: gateway
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openclaw-condo-secrets
+  namespace: openclaw-condo
+stringData:
+  deepseek-api-key: "CHANGE_ME"
+  gateway-token: "CHANGE_ME_CONDO_TOKEN"
