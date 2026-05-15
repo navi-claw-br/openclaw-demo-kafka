@@ -81,6 +81,12 @@ if [ ! -f "$CONFIG_FILE" ]; then
         "auth": {
             "mode": "token",
             "token": "$GATEWAY_TOKEN"
+        },
+        "controlUi": {
+            "allowedOrigins": [
+                "http://localhost:18789",
+                "http://127.0.0.1:18789"
+            ]
         }
     }
 }
